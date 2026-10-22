@@ -1,32 +1,46 @@
-name: Build articles and publish BSCS
+name: Build and deploy BSCS website
+
 on:
   push:
     branches: [main]
-    paths:
-      - 'articles/**'
-      - 'template.html'
-      - 'build.py'
-      - 'requirements.txt'
-      - '.github/workflows/publish.yml'
   workflow_dispatch:
+
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Check out website
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - run: python build.py
-      - name: Commit generated site
-        run: |
-          if ! git diff --quiet -- index.html; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add index.html
-            git commit -m 'Build website from Markdown articles'
-            git push
-          fi
+      - name: Install generator dependencies
+        run: pip install -r requirements.txt
+      - name: Build site from articles and events
+        run: python build.py
+      - name: Check homepage exists
+        run: test -s index.html
+      - name: Disable Jekyll
+        run: touch .nojekyll
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload generated site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
