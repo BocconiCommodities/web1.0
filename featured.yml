@@ -1,0 +1,5 @@
+# Choose what appears in the featured block on Home.
+# type: event  -> slug of a file in events/
+# type: article -> filename without .md from articles/
+type: event
+slug: bbva-research-metals-outlook
